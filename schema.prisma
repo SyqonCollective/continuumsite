@@ -7,6 +7,13 @@ generator client {
   provider = "prisma-client-js"
 }
 
+enum UserRole {
+  OWNER
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
 model User {
   id                        String          @id @default(uuid())
   createdAt                 DateTime        @default(now())
@@ -14,6 +21,7 @@ model User {
   email                     String?         @unique
   username                  String?         @unique
   isAdmin                   Boolean         @default(false)
+  role                      UserRole        @default(VIEWER)
 
   paymentProcessorUserId    String?         @unique
   lemonSqueezyCustomerPortalUrl String?     // You can delete this if you're not using Lemon Squeezy as your payments processor.

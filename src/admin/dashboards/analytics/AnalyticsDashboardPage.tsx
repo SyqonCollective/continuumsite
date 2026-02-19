@@ -29,6 +29,15 @@ const Dashboard = ({ user }: { user: AuthUser }) => {
 
   return (
     <DefaultLayout user={user}>
+      <div className="relative space-y-6">
+        <section className="rounded-xl border border-cyan-300/20 bg-slate-950/70 p-6 shadow-xl shadow-cyan-950/25">
+          <p className="text-xs tracking-[0.26em] text-cyan-300 uppercase">Control Syqon</p>
+          <h1 className="mt-2 text-3xl font-semibold text-slate-100">Operations Dashboard</h1>
+          <p className="mt-2 max-w-3xl text-sm text-slate-400">
+            Monitor product performance, subscriptions, and platform health from a single command center.
+          </p>
+        </section>
+
       <div className="relative">
         <div
           className={cn({
@@ -81,6 +90,7 @@ const Dashboard = ({ user }: { user: AuthUser }) => {
             </div>
           </div>
         )}
+      </div>
       </div>
     </DefaultLayout>
   );

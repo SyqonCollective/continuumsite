@@ -1,4 +1,5 @@
 import { type DailyStats, type PageViewSource } from "wasp/entities";
+import { UserRole } from "@prisma/client";
 import { HttpError, prisma } from "wasp/server";
 import { type GetDailyStats } from "wasp/server/operations";
 
@@ -22,7 +23,12 @@ export const getDailyStats: GetDailyStats<
     );
   }
 
-  if (!context.user.isAdmin) {
+  const hasAdminPrivileges =
+    context.user.isAdmin ||
+    context.user.role === UserRole.ADMIN ||
+    context.user.role === UserRole.OWNER;
+
+  if (!hasAdminPrivileges) {
     throw new HttpError(
       403,
       "Only admins are allowed to perform this operation",

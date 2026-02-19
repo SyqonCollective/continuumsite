@@ -70,7 +70,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
     <aside
       ref={sidebar}
       className={cn(
-        "bg-muted absolute top-0 left-0 z-9999 flex h-screen w-72.5 flex-col overflow-y-hidden border-r duration-300 ease-linear lg:static lg:translate-x-0",
+        "absolute top-0 left-0 z-9999 flex h-screen w-72.5 flex-col overflow-y-hidden border-r border-cyan-300/20 bg-slate-950/95 shadow-2xl shadow-cyan-900/20 duration-300 ease-linear lg:static lg:translate-x-0",
         {
           "translate-x-0": sidebarOpen,
           "-translate-x-full": !sidebarOpen,
@@ -80,7 +80,13 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
       {/* <!-- SIDEBAR HEADER --> */}
       <div className="flex items-center justify-between gap-2 px-6 py-5.5 lg:py-6.5">
         <NavLink to="/">
-          <img src={Logo} alt="Logo" width={50} />
+          <div className="flex items-center gap-2">
+            <img src={Logo} alt="Logo" width={42} />
+            <div>
+              <p className="text-xs tracking-[0.25em] text-cyan-300 uppercase">Control</p>
+              <p className="text-sm font-semibold text-slate-100">Syqon Platform</p>
+            </div>
+          </div>
         </NavLink>
 
         <button
@@ -88,7 +94,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
           onClick={() => setSidebarOpen(!sidebarOpen)}
           aria-controls="sidebar"
           aria-expanded={sidebarOpen}
-          className="block lg:hidden"
+          className="block text-slate-300 lg:hidden"
         >
           <X />
         </button>
@@ -100,8 +106,8 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
         <nav className="mt-5 px-4 py-4 lg:mt-9 lg:px-6">
           {/* <!-- Menu Group --> */}
           <div>
-            <h3 className="text-muted-foreground mb-4 ml-4 text-sm font-semibold">
-              MENU
+            <h3 className="mb-4 ml-4 text-sm font-semibold tracking-[0.2em] text-slate-500 uppercase">
+              Core
             </h3>
 
             <ul className="mb-6 flex flex-col gap-1.5">
@@ -111,9 +117,9 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
                 end
                 className={({ isActive }) =>
                   cn(
-                    "text-muted-foreground hover:bg-accent hover:text-accent-foreground group relative flex items-center gap-2.5 rounded-sm px-4 py-2 font-medium duration-300 ease-in-out",
+                    "group relative flex items-center gap-2.5 rounded-sm px-4 py-2 font-medium text-slate-300 duration-300 ease-in-out hover:bg-cyan-500/10 hover:text-cyan-100",
                     {
-                      "bg-accent text-accent-foreground": isActive,
+                      "bg-cyan-500/15 text-cyan-100": isActive,
                     },
                   )
                 }
@@ -131,9 +137,9 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
                   end
                   className={({ isActive }) =>
                     cn(
-                      "text-muted-foreground hover:bg-accent hover:text-accent-foreground group relative flex items-center gap-2.5 rounded-sm px-4 py-2 font-medium duration-300 ease-in-out",
+                    "group relative flex items-center gap-2.5 rounded-sm px-4 py-2 font-medium text-slate-300 duration-300 ease-in-out hover:bg-cyan-500/10 hover:text-cyan-100",
                       {
-                        "bg-accent text-accent-foreground": isActive,
+                        "bg-cyan-500/15 text-cyan-100": isActive,
                       },
                     )
                   }
@@ -151,9 +157,9 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
                   end
                   className={({ isActive }) =>
                     cn(
-                      "text-muted-foreground hover:bg-accent hover:text-accent-foreground group relative flex items-center gap-2.5 rounded-sm px-4 py-2 font-medium duration-300 ease-in-out",
+                    "group relative flex items-center gap-2.5 rounded-sm px-4 py-2 font-medium text-slate-300 duration-300 ease-in-out hover:bg-cyan-500/10 hover:text-cyan-100",
                       {
-                        "bg-accent text-accent-foreground": isActive,
+                        "bg-cyan-500/15 text-cyan-100": isActive,
                       },
                     )
                   }
@@ -168,8 +174,8 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
 
           {/* <!-- Others Group --> */}
           <div>
-            <h3 className="text-muted-foreground mb-4 ml-4 text-sm font-semibold">
-              Extra Components
+            <h3 className="mb-4 ml-4 text-sm font-semibold tracking-[0.2em] text-slate-500 uppercase">
+              Tools
             </h3>
 
             <ul className="mb-6 flex flex-col gap-1.5">
@@ -180,9 +186,9 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
                   end
                   className={({ isActive }) =>
                     cn(
-                      "text-muted-foreground hover:bg-accent hover:text-accent-foreground group relative flex items-center gap-2.5 rounded-sm px-4 py-2 font-medium duration-300 ease-in-out",
+                    "group relative flex items-center gap-2.5 rounded-sm px-4 py-2 font-medium text-slate-300 duration-300 ease-in-out hover:bg-cyan-500/10 hover:text-cyan-100",
                       {
-                        "bg-accent text-accent-foreground": isActive,
+                        "bg-cyan-500/15 text-cyan-100": isActive,
                       },
                     )
                   }
@@ -203,9 +209,9 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
                       <NavLink
                         to="#"
                         className={cn(
-                          "text-muted-foreground hover:bg-accent hover:text-accent-foreground group relative flex items-center gap-2.5 rounded-sm px-4 py-2 font-medium duration-300 ease-in-out",
+                          "group relative flex items-center gap-2.5 rounded-sm px-4 py-2 font-medium text-slate-300 duration-300 ease-in-out hover:bg-cyan-500/10 hover:text-cyan-100",
                           {
-                            "bg-accent text-accent-foreground":
+                            "bg-cyan-500/15 text-cyan-100":
                               pathname.includes("ui"),
                           },
                         )}

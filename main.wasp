@@ -144,6 +144,11 @@ action updateIsUserAdminById {
   fn: import { updateIsUserAdminById } from "@src/user/operations",
   entities: [User]
 }
+
+action updateUserRoleById {
+  fn: import { updateUserRoleById } from "@src/user/operations",
+  entities: [User]
+}
 //#endregion
 
 //#region Demo AI App

@@ -1,12 +1,11 @@
 import { X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "wasp/client/auth";
 import {
   getPaginatedUsers,
-  updateIsUserAdminById,
+  updateUserRoleById,
   useQuery,
 } from "wasp/client/operations";
-import { type User } from "wasp/entities";
 import { Button } from "../../../client/components/ui/button";
 import { Checkbox } from "../../../client/components/ui/checkbox";
 import { Input } from "../../../client/components/ui/input";
@@ -18,303 +17,264 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../../../client/components/ui/select";
-import { Switch } from "../../../client/components/ui/switch";
 import useDebounce from "../../../client/hooks/useDebounce";
 import { SubscriptionStatus } from "../../../payment/plans";
 import LoadingSpinner from "../../layout/LoadingSpinner";
-import DropdownEditDelete from "./DropdownEditDelete";
 
-function AdminSwitch({ id, isAdmin }: Pick<User, "id" | "isAdmin">) {
-  const { data: currentUser } = useAuth();
-  const isCurrentUser = currentUser?.id === id;
+const roleOptions = [
+  "OWNER",
+  "ADMIN",
+  "EDITOR",
+  "VIEWER",
+] as const;
+type UserRole = (typeof roleOptions)[number];
+
+function RoleBadge({ role }: { role: UserRole }) {
+  const palette =
+    role === UserRole.OWNER
+      ? "bg-amber-500/15 text-amber-300 border-amber-300/30"
+      : role === UserRole.ADMIN
+        ? "bg-sky-500/15 text-sky-300 border-sky-300/30"
+        : role === UserRole.EDITOR
+          ? "bg-violet-500/15 text-violet-300 border-violet-300/30"
+          : "bg-zinc-500/15 text-zinc-300 border-zinc-300/30";
 
   return (
-    <Switch
-      checked={isAdmin}
-      onCheckedChange={(value) =>
-        updateIsUserAdminById({ id: id, isAdmin: value })
+    <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${palette}`}>
+      {role}
+    </span>
+  );
+}
+
+function RoleSelect({
+  userId,
+  role,
+  disabled,
+}: {
+  userId: string;
+  role: UserRole;
+  disabled: boolean;
+}) {
+  return (
+    <Select
+      value={role}
+      onValueChange={(value) =>
+        updateUserRoleById({ id: userId, role: value as UserRole })
       }
-      disabled={isCurrentUser}
-    />
+      disabled={disabled}
+    >
+      <SelectTrigger className="h-8 w-34">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {roleOptions.map((r) => (
+          <SelectItem key={r} value={r}>
+            {r}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
 const UsersTable = () => {
+  const { data: currentUser } = useAuth();
+
   const [currentPage, setCurrentPage] = useState(1);
   const [emailFilter, setEmailFilter] = useState<string | undefined>(undefined);
-  const [isAdminFilter, setIsAdminFilter] = useState<boolean | undefined>(
-    undefined,
-  );
+  const [roleFilter, setRoleFilter] = useState<UserRole[]>([]);
   const [subscriptionStatusFilter, setSubscriptionStatusFilter] = useState<
     Array<SubscriptionStatus | null>
   >([]);
 
   const debouncedEmailFilter = useDebounce(emailFilter, 300);
-
   const skipPages = currentPage - 1;
 
   const { data, isLoading } = useQuery(getPaginatedUsers, {
     skipPages,
     filter: {
       ...(debouncedEmailFilter && { emailContains: debouncedEmailFilter }),
-      ...(isAdminFilter !== undefined && { isAdmin: isAdminFilter }),
+      ...(roleFilter.length > 0 && { roleIn: roleFilter }),
       ...(subscriptionStatusFilter.length > 0 && {
         subscriptionStatusIn: subscriptionStatusFilter,
       }),
     },
   });
 
-  useEffect(
-    function backToPageOne() {
-      setCurrentPage(1);
-    },
-    [debouncedEmailFilter, subscriptionStatusFilter, isAdminFilter],
-  );
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedEmailFilter, subscriptionStatusFilter, roleFilter]);
 
   const handleStatusToggle = (status: SubscriptionStatus | null) => {
-    setSubscriptionStatusFilter((prev) => {
-      if (prev.includes(status)) {
-        return prev.filter((s) => s !== status);
-      } else {
-        return [...prev, status];
-      }
-    });
+    setSubscriptionStatusFilter((prev) =>
+      prev.includes(status) ? prev.filter((s) => s !== status) : [...prev, status],
+    );
   };
 
-  const clearAllStatusFilters = () => {
+  const handleRoleToggle = (role: UserRole) => {
+    setRoleFilter((prev) =>
+      prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role],
+    );
+  };
+
+  const clearAllFilters = () => {
+    setRoleFilter([]);
     setSubscriptionStatusFilter([]);
   };
 
   const hasActiveFilters =
-    subscriptionStatusFilter && subscriptionStatusFilter.length > 0;
+    roleFilter.length > 0 || subscriptionStatusFilter.length > 0;
+
+  const rows = data?.users ?? [];
+
+  const userRoleSummary = useMemo(() => {
+    const summary: Record<UserRole, number> = {
+      OWNER: 0,
+      ADMIN: 0,
+      EDITOR: 0,
+      VIEWER: 0,
+    };
+    rows.forEach((u) => {
+      summary[u.role] += 1;
+    });
+    return summary;
+  }, [rows]);
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="border-border bg-card rounded-sm border shadow-sm">
-        <div className="bg-muted/40 flex w-full flex-col items-start justify-between gap-3 p-6">
-          <span className="text-sm font-medium">Filters:</span>
-          <div className="flex w-full items-center justify-between gap-3 px-2">
-            <div className="relative flex items-center gap-3">
-              <Label
-                htmlFor="email-filter"
-                className="text-muted-foreground text-sm"
-              >
-                email:
-              </Label>
+    <div className="space-y-4">
+      <div className="rounded-xl border border-cyan-300/20 bg-slate-950/70 p-4 shadow-lg shadow-cyan-950/25">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold tracking-widest text-cyan-300">ACCESS CONTROL</p>
+            <h2 className="text-xl font-semibold text-slate-100">Users & Roles</h2>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {roleOptions.map((role) => (
+              <span key={role} className="rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1 text-xs text-slate-300">
+                {role}: {userRoleSummary[role]}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+            <div className="space-y-1">
+              <Label htmlFor="email-filter">Email contains</Label>
               <Input
-                type="text"
                 id="email-filter"
-                placeholder="dude@example.com"
+                placeholder="user@company.com"
                 onChange={(e) => {
-                  const value = e.currentTarget.value;
+                  const value = e.currentTarget.value.trim();
                   setEmailFilter(value === "" ? undefined : value);
                 }}
               />
-              <Label
-                htmlFor="status-filter"
-                className="text-muted-foreground ml-2 text-sm"
-              >
-                status:
-              </Label>
-              <div className="relative">
-                <Select>
-                  <SelectTrigger className="w-full min-w-[200px]">
-                    <SelectValue placeholder="Select Status Filter" />
-                  </SelectTrigger>
-                  <SelectContent className="w-[300px]">
-                    <div className="p-2">
-                      <div className="mb-2 flex items-center justify-between">
-                        <span className="text-sm font-medium">
-                          Subscription Status
-                        </span>
-                        {subscriptionStatusFilter.length > 0 && (
-                          <button
-                            onClick={clearAllStatusFilters}
-                            className="text-muted-foreground hover:text-foreground text-xs"
-                          >
-                            Clear all
-                          </button>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="all-statuses"
-                            checked={subscriptionStatusFilter.length === 0}
-                            onCheckedChange={() => clearAllStatusFilters()}
-                          />
-                          <Label
-                            htmlFor="all-statuses"
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                          >
-                            All Statuses
-                          </Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="has-not-subscribed"
-                            checked={subscriptionStatusFilter.includes(null)}
-                            onCheckedChange={() => handleStatusToggle(null)}
-                          />
-                          <Label
-                            htmlFor="has-not-subscribed"
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                          >
-                            Has Not Subscribed
-                          </Label>
-                        </div>
-                        {Object.values(SubscriptionStatus).map((status) => (
-                          <div
-                            key={status}
-                            className="flex items-center space-x-2"
-                          >
-                            <Checkbox
-                              id={status}
-                              checked={subscriptionStatusFilter.includes(
-                                status,
-                              )}
-                              onCheckedChange={() => handleStatusToggle(status)}
-                            />
-                            <Label
-                              htmlFor={status}
-                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                            >
-                              {status}
-                            </Label>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center gap-2">
-                <Label
-                  htmlFor="admin-filter"
-                  className="text-muted-foreground ml-2 text-sm"
-                >
-                  isAdmin:
-                </Label>
-                <Select
-                  onValueChange={(value) => {
-                    if (value === "both") {
-                      setIsAdminFilter(undefined);
-                    } else {
-                      setIsAdminFilter(value === "true");
-                    }
-                  }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="both" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="both">both</SelectItem>
-                    <SelectItem value="true">true</SelectItem>
-                    <SelectItem value="false">false</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
-            {data?.totalPages && (
-              <div className="flex max-w-60 flex-row items-center">
-                <span className="text-md text-foreground mr-2">page</span>
-                <Input
-                  type="number"
-                  min={1}
-                  defaultValue={currentPage}
-                  max={data?.totalPages}
-                  onChange={(e) => {
-                    const value = parseInt(e.currentTarget.value);
-                    if (
-                      data?.totalPages &&
-                      value <= data?.totalPages &&
-                      value > 0
-                    ) {
-                      setCurrentPage(value);
-                    }
-                  }}
-                  className="w-20"
-                />
-                <span className="text-md text-foreground">
-                  {" "}
-                  /{data?.totalPages}{" "}
-                </span>
-              </div>
-            )}
-          </div>
-          {hasActiveFilters && (
-            <div className="border-border flex items-center gap-2 px-2 pt-2">
-              <span className="text-muted-foreground text-sm font-medium">
-                Active Filters:
-              </span>
-              <div className="flex flex-wrap gap-2">
-                {subscriptionStatusFilter.map((status) => (
-                  <Button
-                    key={status ?? "null"}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleStatusToggle(status)}
-                  >
-                    <X className="mr-1 h-3 w-3" />
-                    {status ?? "Has Not Subscribed"}
-                  </Button>
+
+            <div className="space-y-1">
+              <Label>Role filters</Label>
+              <div className="flex flex-wrap gap-2 rounded-md border border-slate-700 bg-slate-900 p-2">
+                {roleOptions.map((role) => (
+                  <label key={role} className="inline-flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={roleFilter.includes(role)}
+                      onCheckedChange={() => handleRoleToggle(role)}
+                    />
+                    {role}
+                  </label>
                 ))}
               </div>
             </div>
-          )}
-        </div>
 
-        <div className="border-border py-4.5 grid grid-cols-9 border-t-4 px-4 md:px-6">
-          <div className="col-span-3 flex items-center">
-            <p className="font-medium">Email / Username</p>
-          </div>
-          <div className="col-span-2 flex items-center">
-            <p className="font-medium">Subscription Status</p>
-          </div>
-          <div className="col-span-2 flex items-center">
-            <p className="font-medium">Stripe ID</p>
-          </div>
-          <div className="col-span-1 flex items-center">
-            <p className="font-medium">Is Admin</p>
-          </div>
-          <div className="col-span-1 flex items-center">
-            <p className="font-medium"></p>
-          </div>
-        </div>
-        {isLoading && <LoadingSpinner />}
-        {!!data?.users &&
-          data?.users?.length > 0 &&
-          data.users.map((user) => (
-            <div
-              key={user.id}
-              className="py-4.5 grid grid-cols-9 gap-4 px-4 md:px-6"
-            >
-              <div className="col-span-3 flex items-center">
-                <div className="flex flex-col gap-1">
-                  <p className="text-foreground text-sm">{user.email}</p>
-                  <p className="text-foreground text-sm">{user.username}</p>
-                </div>
-              </div>
-              <div className="col-span-2 flex items-center">
-                <p className="text-foreground text-sm">
-                  {user.subscriptionStatus}
-                </p>
-              </div>
-              <div className="col-span-2 flex items-center">
-                <p className="text-muted-foreground text-sm">
-                  {user.paymentProcessorUserId}
-                </p>
-              </div>
-              <div className="col-span-1 flex items-center">
-                <div className="text-foreground text-sm">
-                  <AdminSwitch {...user} />
-                </div>
-              </div>
-              <div className="col-span-1 flex items-center">
-                <DropdownEditDelete />
+            <div className="space-y-1">
+              <Label>Subscription status</Label>
+              <div className="flex flex-wrap gap-2 rounded-md border border-slate-700 bg-slate-900 p-2">
+                <label className="inline-flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={subscriptionStatusFilter.includes(null)}
+                    onCheckedChange={() => handleStatusToggle(null)}
+                  />
+                  None
+                </label>
+                {Object.values(SubscriptionStatus).map((status) => (
+                  <label key={status} className="inline-flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={subscriptionStatusFilter.includes(status)}
+                      onCheckedChange={() => handleStatusToggle(status)}
+                    />
+                    {status}
+                  </label>
+                ))}
               </div>
             </div>
-          ))}
+          </div>
+
+          {hasActiveFilters && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs uppercase tracking-widest text-slate-400">Active filters</span>
+              <Button variant="outline" size="sm" onClick={clearAllFilters}>
+                <X className="mr-1 h-3 w-3" />
+                Clear
+              </Button>
+            </div>
+          )}
+
+          {!!data?.totalPages && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-slate-300">Page</span>
+              <Input
+                type="number"
+                min={1}
+                defaultValue={currentPage}
+                max={data.totalPages}
+                className="w-20"
+                onChange={(e) => {
+                  const value = Number.parseInt(e.currentTarget.value);
+                  if (!Number.isNaN(value) && value >= 1 && value <= data.totalPages) {
+                    setCurrentPage(value);
+                  }
+                }}
+              />
+              <span className="text-sm text-slate-300">/ {data.totalPages}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-xl border border-slate-700 bg-slate-950/70">
+        <div className="grid grid-cols-12 gap-3 border-b border-slate-800 px-4 py-3 text-xs font-semibold tracking-wide text-slate-300 uppercase">
+          <div className="col-span-4">User</div>
+          <div className="col-span-2">Subscription</div>
+          <div className="col-span-2">Billing ID</div>
+          <div className="col-span-2">Role</div>
+          <div className="col-span-2">Change role</div>
+        </div>
+
+        {isLoading && <LoadingSpinner />}
+
+        {rows.map((user) => {
+          const isCurrentUser = currentUser?.id === user.id;
+          return (
+            <div key={user.id} className="grid grid-cols-12 gap-3 border-b border-slate-900 px-4 py-3 text-sm">
+              <div className="col-span-4">
+                <p className="text-slate-100">{user.email}</p>
+                <p className="text-xs text-slate-400">{user.username}</p>
+              </div>
+              <div className="col-span-2 text-slate-300">{user.subscriptionStatus ?? "-"}</div>
+              <div className="col-span-2 text-slate-500">{user.paymentProcessorUserId ?? "-"}</div>
+              <div className="col-span-2">
+                <RoleBadge role={user.role} />
+              </div>
+              <div className="col-span-2">
+                <RoleSelect userId={user.id} role={user.role} disabled={isCurrentUser} />
+              </div>
+            </div>
+          );
+        })}
+
+        {!isLoading && rows.length === 0 && (
+          <div className="px-4 py-6 text-sm text-slate-400">No users found for the selected filters.</div>
+        )}
       </div>
     </div>
   );
